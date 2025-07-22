@@ -27,7 +27,6 @@ friendControllers.sendRequest = async (req, res, next) => {
         { from: userId, to: toUserId },
       ],
     });
-
     if (!friend) {
       //Create friend request
       friend = await Friend.create({
@@ -72,6 +71,7 @@ friendControllers.sendRequest = async (req, res, next) => {
           friend.from = userId;
           friend.to = toUserId;
           friend.status = "pending";
+          friend.updatedAt = new Date();
           await friend.save();
           return sendResponse(
             res,
@@ -326,7 +326,11 @@ friendControllers.cancelFriendRequest = async (req, res, next) => {
         "Cancel request error"
       );
 
-    await Friend.deleteOne();
+    await Friend.deleteOne({
+      from: userId,
+      to: toUserId,
+      status: "pending",
+    });
 
     sendResponse(
       res,
