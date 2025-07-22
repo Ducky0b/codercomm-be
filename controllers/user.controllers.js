@@ -40,8 +40,8 @@ userControllers.getUsers = async (req, res, next) => {
 
     const filterConditions = [{ isDeleted: false }];
     if (filter.name) {
-      filterCriteria.push({
-        name: { $regex: filter.name, options: "i" },
+      filterConditions.push({
+        name: { $regex: filter.name, $options: "i" },
       });
     }
     const filterCriteria = filterConditions.length
@@ -57,8 +57,8 @@ userControllers.getUsers = async (req, res, next) => {
       .limit(limit);
     if (!user) throw new AppError(400, "Bad Request", "Get all user error");
 
-    const promises = user.map(async (u) => {
-      let temp = u.toJSON();
+    const promises = user.map(async (user) => {
+      let temp = user.toJSON();
       temp.friendship = await Friend.findOne({
         $or: [
           { from: userId, to: user._id },
