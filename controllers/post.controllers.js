@@ -20,7 +20,7 @@ postControllers.createPost = async (req, res, next) => {
     const { content, image } = req.body;
 
     let post = await Post.create({ content, image, author: userId });
-    
+
     await calculatorPostCount(userId);
     post = await post.populate("author");
 
@@ -67,9 +67,44 @@ postControllers.getSinglePostById = async (req, res, next) => {
     next(error);
   }
 };
-postControllers.getAllUsersWithPagination = async (req, res, next) => {
+postControllers.getAllPostssWithPagination = async (req, res, next) => {
   try {
-    const currentUserId = req;
+    let { page, limit } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    const filterConditions = [{ isDeleted: false }];
+
+    const filterCriteria = filterConditions.length
+      ? { $and: filterConditions }
+      : {};
+
+    const count = await Post.countDocuments(filterCriteria);
+    const totalPage = Math.ceil(count / limit);
+    const offset = limit * (page - 1);
+
+    const post = await Post.find(filterCriteria)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .populate("author");
+    if (!post) throw new AppError(400, "Bad Request", "Get all post error");
+
+    sendResponse(
+      res,
+      200,
+      true,
+      { post, totalPage, count },
+      null,
+      "Get All Post Succesful"
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+postControllers.getAllPostsOfUser = async (req, res, next) => {
+  try {
     const { userId } = req.params;
     let { page, limit, ...filter } = { ...req.query };
 
@@ -79,23 +114,7 @@ postControllers.getAllUsersWithPagination = async (req, res, next) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
 
-    let userFriendIDs = await Friend.find({
-      $or: [{ from: userId }, { to: userId }],
-      status: "accepted",
-    });
-    if (userFriendIDs && userFriendIDs.length) {
-      userFriendIDs = userFriendIDs.map((friend) => {
-        if (friend.from._id.equals(userId)) return friend.to;
-        return friend.from;
-      });
-    } else {
-      userFriendIDs = [];
-    }
-    userFriendIDs = [...userFriendIDs, userId];
-    const filterConditions = [
-      { isDeleted: false },
-      { author: { $in: userFriendIDs } },
-    ];
+    const filterConditions = [{ isDeleted: false }, { author: userId }];
 
     const filterCriteria = filterConditions.length
       ? { $and: filterConditions }

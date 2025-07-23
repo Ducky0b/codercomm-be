@@ -99,13 +99,15 @@ friendControllers.getReceivedFriendRequestList = async (req, res, next) => {
     let { page, limit, ...filter } = { ...req.query };
     const { userId } = req;
 
+    // Lấy các request mà user hiện tại đã GỬI (from: userId)
     let requestList = await Friend.find({
-      to: userId,
+      from: userId,
       status: "pending",
     });
+
+    // Lấy danh sách ID của những user mà mình đã gửi request
     const requestIDs = requestList.map((request) => {
-      if (request.from._id.equals(userId)) return request.to;
-      return request.from;
+      return request.to;
     });
 
     const filterConditions = [{ _id: { $in: requestIDs } }];
@@ -122,7 +124,7 @@ friendControllers.getReceivedFriendRequestList = async (req, res, next) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const count = await User.countDocuments(filterCriteria);
-    const totalPage = Math.ceil(count / page);
+    const totalPage = Math.ceil(count / limit);
     const offset = limit * (page - 1);
 
     const users = await User.find(filterCriteria)
@@ -183,7 +185,7 @@ friendControllers.getSentFriendRequestList = async (req, res, next) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const count = await User.countDocuments(filterCriteria);
-    const totalPage = Math.ceil(count / page);
+    const totalPage = Math.ceil(count / limit);
     const offset = limit * (page - 1);
 
     const users = await User.find(filterCriteria)
@@ -191,17 +193,20 @@ friendControllers.getSentFriendRequestList = async (req, res, next) => {
       .skip(offset)
       .limit(limit);
 
+    //✅ Fixed version - trong backend controller
     const usersWithFriendship = users.map((user) => {
       let temp = user.toJSON();
+
+      // Tìm friendship record tương ứng với user này
       temp.friendship = requestList.find((friendship) => {
-        if (
-          friendship.from.equals(user._id) ||
-          friendship.to.equals(user._id)
-        ) {
-          return { status: friendship.status };
-        }
-        return false;
+        return (
+          friendship.from.equals(user._id) || friendship.to.equals(user._id)
+        );
       });
+
+      // ✅ Debug log để kiểm tra
+      console.log(`User ${temp.name} friendship:`, temp.friendship);
+
       return temp;
     });
     sendResponse(

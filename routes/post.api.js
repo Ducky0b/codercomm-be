@@ -8,23 +8,25 @@ const {
   createPost,
   updatePost,
   getSinglePostById,
-  getAllUsersWithPagination,
   deletePost,
   getCommentsOfPost,
+  getAllPostsOfUser,
+  getAllPostssWithPagination,
 } = require("../controllers/post.controllers");
+/**
+ * @route GET /posts/users?page=1&limit=10
+ * @description Get all post an user can see with pagination
+ * @body
+ * @access Login required
+ */
+router.get("/users", loginRequired, getAllPostssWithPagination);
 /**
  * @route GET /posts/users/:userId?page=1&limit=10
  * @description Get all post an user can see with pagination
  * @body
  * @access Login required
  */
-router.get(
-  "/users/:userId",
-  validators.validate([
-    param("userId").exists().isString().custom(validators.checkObjectId),
-  ]),
-  getAllUsersWithPagination
-);
+router.get("/users/:userId", loginRequired, getAllPostsOfUser);
 /**
  * @route POST /posts
  * @description Create a new post
